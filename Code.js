@@ -31,9 +31,6 @@ function doPost(e) {
     // combine arrays
     const sentimentArray = [rowId,description].concat(sentiment);
 
-    // append into sheet, if desired
-    //SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Sheet1').appendRow(sentimentArray);
-
     // send score back to Google Tables
     const rowName = 'tables/' + TABLE_NAME + '/rows/' + rowId;
     const sentimentValues = {
@@ -64,7 +61,7 @@ function analyzeFeedback(description) {
     }
     else {
       
-      // set to zero if the description cell is blank
+      // set to zero if the description is blank
       nlMagnitude = 0;
       nlScore = 0;
 
@@ -102,24 +99,22 @@ function analyzeFeedback(description) {
 }
 
 /**
- * Calls Google Cloud Natural Language API with cell string from my Sheet
- * @param {String} cell The string from a cell in my Sheet
+ * Calls Google Cloud Natural Language API with string from Tables
+ * @param {String} description The string from row in Tables
  * @return {Object} the entities and related sentiment present in my string
  */
-function retrieveSentiment(cell) {
+function retrieveSentiment(description) {
   
-  //console.log(cell);
-  
-  const apiEndpoint = 'https://language.googleapis.com/v1/documents:analyzeEntitySentiment?key=' + API_KEY;
+  //console.log(description);
 
-  const apiEndpoint2 = 'https://language.googleapis.com/v1/documents:analyzeSentiment?key=' + API_KEY;
+  const apiEndpoint = 'https://language.googleapis.com/v1/documents:analyzeSentiment?key=' + API_KEY;
   
   // Create our json request, w/ text, language, type & encoding
   const nlData = {
     document: {
       language: 'en-us',
       type: 'PLAIN_TEXT',
-      content: cell
+      content: description
     },
     encodingType: 'UTF8'
   };
@@ -135,7 +130,7 @@ function retrieveSentiment(cell) {
   try {
     
     // return the parsed JSON data if successful
-    const response = UrlFetchApp.fetch(apiEndpoint2, nlOptions);
+    const response = UrlFetchApp.fetch(apiEndpoint, nlOptions);
     return JSON.parse(response);
     
   } catch(e) {

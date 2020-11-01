@@ -9,6 +9,7 @@
  * global variables
  */
 const API_KEY = ''; // <-- enter your google cloud project API key here
+const TABLE_NAME = ''; // <-- enter your google tables table ID here
 
 /**
  * custom menu
@@ -26,7 +27,7 @@ function onOpen() {
  */
 function doPost(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('Sheet2');
+  const sheet = ss.getSheetByName('Sheet1');
   
   if (typeof e !== 'undefined') {
 
@@ -34,20 +35,83 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
 
     // get the id and description
-    const tableId = data.id
+    const rowId = data.id
     const description = data.description;
 
     // analyze sentiment
-    const sentiment = analyzeFeedback(description);
-
+    const sentiment = analyzeFeedback(description); // [nlScore,nlMagnitude,emotion]
+    
     // combine arrays
-    const sentimentArray = [tableId,description].concat(sentiment);
+    const sentimentArray = [rowId,description].concat(sentiment);
 
     // append into sheet
     sheet.appendRow(sentimentArray);
 
+    // send score back to Google Tables
+    const rowName = 'tables/' + TABLE_NAME + '/rows/' + rowId;
+    const sentimentValues = {
+      'Sentiment Score': sentiment[0],
+      'Sentiment Magnitude': sentiment[1],
+      'Sentiment Tag': sentiment[2]
+    };
+    Area120Tables.Tables.Rows.patch({values: sentimentValues}, rowName);
+
     return null;
   }
+}
+
+/**
+ * Get each new row of form data and retrieve the sentiment 
+ * scores from the NL API for text in the feedback column.
+ */
+function analyzeFeedback(description) {
+
+  if (description !== '') {
+      
+      // call the NL API
+      const nlData = retrieveSentiment(description);
+      nlMagnitude = nlData.documentSentiment.magnitude ? nlData.documentSentiment.magnitude : 0; // set to 0 if nothing returned by api
+      nlScore = nlData.documentSentiment.score ? nlData.documentSentiment.score : 0; // set to 0 if nothing returned by api
+      //console.log(nlMagnitude);
+      //console.log(nlScore);
+    }
+    else {
+      
+      // set to zero if the description cell is blank
+      nlMagnitude = 0;
+      nlScore = 0;
+
+    }
+
+    // turn sentiment numbers into tags
+    let emotion = '';
+    
+    // happy
+    if (nlScore > 0.5) { 
+      
+      if (nlMagnitude > 2) { emotion = 'Super happy!'; } // higher magnitude gets higher emotion tag
+      else { emotion = 'Happy'; }
+
+    }
+    
+    // satisfied
+    else if (nlScore > 0) {  emotion = 'Satisfied'; }
+
+    // frustrated
+    else if (nlScore < 0 && nlScore >= -0.5) { emotion = 'Frustrated'; }
+
+    // angry
+    else if (nlScore < -0.5) { 
+      
+      if (nlMagnitude > 2) { emotion = 'Super angry!'; } // higher magnitude gets higher emotion tag
+      else { emotion = 'Angry'; }
+    
+    }
+
+    // if score is 0
+    else { emotion = 'No opinion' }
+
+    return [nlScore,nlMagnitude,emotion];
 }
 
 
@@ -56,11 +120,11 @@ function doPost(e) {
  * Get each new row of form data and retrieve the sentiment 
  * scores from the NL API for text in the feedback column.
  */
-function analyzeFeedback() {
+function analyzeSheetFeedback() {
   
   // get data from the Sheet
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('Sheet1');
+  const sheet = ss.getSheetByName('Sheet2');
   const allRange = sheet.getDataRange();
   const allData = allRange.getValues();
   
@@ -89,7 +153,9 @@ function analyzeFeedback() {
       nlScore = 0;
 
     }
+
     console.log(nlMagnitude);
+    console.log(nlScore);
   });
 }
 

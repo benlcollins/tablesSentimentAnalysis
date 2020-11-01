@@ -27,25 +27,19 @@ function onOpen() {
 function doPost(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Sheet2');
-  const lastRow = sheet.getLastRow();
   
   if (typeof e !== 'undefined') {
-    console.log(e);
-    const tableId = JSON.stringify(e.postData.contents['id']);
-    const description = JSON.stringify(e.postData.contents['description']);
-    
-    //sheet.getRange(lastRow + 1,1,1,2).setValues([[tableId,description]]);
-    sheet.appendRow([tableId,description]);
-    //sheet.getRange(lastRow + 1,2).setValue(description);
-    //const data = JSON.stringify(e.postData.contents);
-    //sheet.getRange(sheet.getLastRow() + 1,1).setValue(data);
-    return;
 
-    /*
-    const data = JSON.stringify(e);
-    sheet.getRange(sheet.getLastRow() + 1,1).setValue(data);
-    return;
-    */
+    // parse data
+    const data = JSON.parse(e.postData.contents);
+
+    // get the id and description
+    const tableId = data.id
+    const description = data.description;
+
+    // append into sheet
+    sheet.appendRow([tableId,description]);
+    return null;
   }
 }
 

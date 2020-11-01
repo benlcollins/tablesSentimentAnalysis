@@ -37,8 +37,15 @@ function doPost(e) {
     const tableId = data.id
     const description = data.description;
 
+    // analyze sentiment
+    const sentiment = analyzeFeedback(description);
+
+    // combine arrays
+    const sentimentArray = [tableId,description].concat(sentiment);
+
     // append into sheet
-    sheet.appendRow([tableId,description]);
+    sheet.appendRow(sentimentArray);
+
     return null;
   }
 }

@@ -11,6 +11,47 @@
 const API_KEY = ''; // <-- enter your google cloud project API key here
 
 /**
+ * custom menu
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  
+  ui.createMenu("Analyze Feedback Tool")
+  .addItem("Analyze Feedback","analyzeFeedback")
+  .addToUi();
+}
+
+/**
+ * doPost webhook to catch data from Google Tables
+ */
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Sheet2');
+  const lastRow = sheet.getLastRow();
+  
+  if (typeof e !== 'undefined') {
+    console.log(e);
+    const tableId = JSON.stringify(e.postData.contents['id']);
+    const description = JSON.stringify(e.postData.contents['description']);
+    
+    //sheet.getRange(lastRow + 1,1,1,2).setValues([[tableId,description]]);
+    sheet.appendRow([tableId,description]);
+    //sheet.getRange(lastRow + 1,2).setValue(description);
+    //const data = JSON.stringify(e.postData.contents);
+    //sheet.getRange(sheet.getLastRow() + 1,1).setValue(data);
+    return;
+
+    /*
+    const data = JSON.stringify(e);
+    sheet.getRange(sheet.getLastRow() + 1,1).setValue(data);
+    return;
+    */
+  }
+}
+
+
+
+/**
  * Get each new row of form data and retrieve the sentiment 
  * scores from the NL API for text in the feedback column.
  */
@@ -29,13 +70,26 @@ function analyzeFeedback() {
   allData.forEach(row => {
     const rowId = row[0];
     const description = row[6];
-    console.log(rowId + ' ' + description);
+    const sentiment = row[11];
+    let nlMagnitude, nlScore;
 
-    const nlData = retrieveSentiment(description);
+    if (description !== '') {
+      
+      const nlData = retrieveSentiment(description);
+      nlMagnitude = nlData.documentSentiment.magnitude ? nlData.documentSentiment.magnitude : 0; // set to 0 if nothing returned by api
+      nlScore = nlData.documentSentiment.score ? nlData.documentSentiment.score : 0; // set to 0 if nothing returned by api
+      //console.log(nlMagnitude);
+      //console.log(nlScore);
+    }
+    else {
+      
+      // set to zero if the description cell is blank
+      nlMagnitude = 0;
+      nlScore = 0;
 
-    console.log(nlData);
+    }
+    console.log(nlMagnitude);
   });
-
 }
 
 
@@ -49,6 +103,8 @@ function retrieveSentiment(cell) {
   //console.log(cell);
   
   const apiEndpoint = 'https://language.googleapis.com/v1/documents:analyzeEntitySentiment?key=' + API_KEY;
+
+  const apiEndpoint2 = 'https://language.googleapis.com/v1/documents:analyzeSentiment?key=' + API_KEY;
   
   // Create our json request, w/ text, language, type & encoding
   const nlData = {
@@ -71,7 +127,7 @@ function retrieveSentiment(cell) {
   try {
     
     // return the parsed JSON data if successful
-    const response = UrlFetchApp.fetch(apiEndpoint, nlOptions);
+    const response = UrlFetchApp.fetch(apiEndpoint2, nlOptions);
     return JSON.parse(response);
     
   } catch(e) {

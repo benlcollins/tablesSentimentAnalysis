@@ -12,22 +12,9 @@ const API_KEY = ''; // <-- enter your google cloud project API key here
 const TABLE_NAME = ''; // <-- enter your google tables table ID here
 
 /**
- * custom menu
- */
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  
-  ui.createMenu("Analyze Feedback Tool")
-  .addItem("Analyze Feedback","analyzeFeedback")
-  .addToUi();
-}
-
-/**
  * doPost webhook to catch data from Google Tables
  */
 function doPost(e) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('Sheet1');
   
   if (typeof e !== 'undefined') {
 
@@ -44,8 +31,8 @@ function doPost(e) {
     // combine arrays
     const sentimentArray = [rowId,description].concat(sentiment);
 
-    // append into sheet
-    sheet.appendRow(sentimentArray);
+    // append into sheet, if desired
+    //SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Sheet1').appendRow(sentimentArray);
 
     // send score back to Google Tables
     const rowName = 'tables/' + TABLE_NAME + '/rows/' + rowId;
@@ -113,52 +100,6 @@ function analyzeFeedback(description) {
 
     return [nlScore,nlMagnitude,emotion];
 }
-
-
-
-/**
- * Get each new row of form data and retrieve the sentiment 
- * scores from the NL API for text in the feedback column.
- */
-function analyzeSheetFeedback() {
-  
-  // get data from the Sheet
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('Sheet2');
-  const allRange = sheet.getDataRange();
-  const allData = allRange.getValues();
-  
-  // remove the header row
-  allData.shift();
-  //console.log(allData);
-
-  allData.forEach(row => {
-    const rowId = row[0];
-    const description = row[6];
-    const sentiment = row[11];
-    let nlMagnitude, nlScore;
-
-    if (description !== '') {
-      
-      const nlData = retrieveSentiment(description);
-      nlMagnitude = nlData.documentSentiment.magnitude ? nlData.documentSentiment.magnitude : 0; // set to 0 if nothing returned by api
-      nlScore = nlData.documentSentiment.score ? nlData.documentSentiment.score : 0; // set to 0 if nothing returned by api
-      //console.log(nlMagnitude);
-      //console.log(nlScore);
-    }
-    else {
-      
-      // set to zero if the description cell is blank
-      nlMagnitude = 0;
-      nlScore = 0;
-
-    }
-
-    console.log(nlMagnitude);
-    console.log(nlScore);
-  });
-}
-
 
 /**
  * Calls Google Cloud Natural Language API with cell string from my Sheet
